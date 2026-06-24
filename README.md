@@ -1,1 +1,1907 @@
-# study
+[study_quest (4).html](https://github.com/user-attachments/files/29314654/study_quest.4.html)
+# study<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Studymetrics - 高機能学習ポートフォリオ</title>
+    
+    <!-- PWA (スマホアプリ化) のための設定コード -->
+    <link class="pwa-manifest" rel="manifest" href="manifest.json">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-title" content="Studymetrics">
+    <link rel="apple-touch-icon" href="https://cdn-icons-png.flaticon.com/512/2232/2232688.png">
+    <meta name="theme-color" content="#4f46e5">
+
+    <!-- Tailwind CSS & CDN Libraries -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&family=Noto+Sans+JP:wght@400;500;700;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
+    <!-- Firebase Compat SDKs (安定版の10.8.0を使用) -->
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
+    
+    <style>
+        body {
+            font-family: 'Plus Jakarta Sans', 'Noto Sans JP', sans-serif;
+            background-color: #f1f5f9;
+            color: #1e293b;
+        }
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+        .glass-card {
+            background: rgba(255, 255, 255, 0.9);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(99, 102, 241, 0.12);
+            box-shadow: 0 10px 25px -5px rgba(99, 102, 241, 0.05);
+        }
+        /* Custom scrollbar */
+        ::-webkit-scrollbar {
+            width: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #f1f5f9;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 9999px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8;
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col">
+
+    <!-- WELCOME SCREEN (初回起動・初期化時に表示) -->
+    <div id="welcomeOverlay" class="fixed inset-0 bg-slate-900/60 backdrop-blur-md z-50 flex items-center justify-center p-4 transition-all duration-500 hidden">
+        <div class="bg-white rounded-3xl p-6 md:p-8 max-w-md w-full shadow-2xl border border-indigo-100 flex flex-col gap-6 text-center">
+            <div>
+                <div class="w-14 h-14 bg-gradient-to-tr from-indigo-500 to-violet-500 rounded-2xl flex items-center justify-center shadow-lg mx-auto mb-3">
+                    <i class="fas fa-chart-line text-2xl text-white"></i>
+                </div>
+                <h2 class="text-2xl font-black text-slate-800 tracking-tight">Studymetrics へようこそ</h2>
+                <p class="text-xs text-slate-400 mt-1 font-semibold uppercase tracking-wider">Create Your Academic Identity</p>
+            </div>
+
+            <div class="space-y-4">
+                <div>
+                    <label class="text-xs text-slate-500 font-bold block text-left mb-1.5">アバターを選択</label>
+                    <div class="grid grid-cols-6 gap-2" id="avatarSelectorGrid"></div>
+                </div>
+                <div>
+                    <label class="text-xs text-slate-500 font-bold block text-left mb-1.5">ニックネームを設定</label>
+                    <input type="text" id="welcomeNickInput" class="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 font-semibold" required>
+                </div>
+            </div>
+
+            <button onclick="submitWelcomeSetup()" class="w-full py-3.5 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-2xl transition-all shadow-lg active:scale-95">
+                学習ポートフォリオを作成して開始する
+            </button>
+        </div>
+    </div>
+
+    <!-- MAIN APP SCREEN -->
+    <div id="appContainer" class="flex-1 flex flex-col">
+        <header class="glass-card sticky top-0 z-40 border-b border-indigo-100/80 bg-white/95">
+            <div class="max-w-6xl mx-auto px-4 py-3.5 flex justify-between items-center">
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 bg-gradient-to-tr from-indigo-500 to-violet-500 rounded-xl flex items-center justify-center shadow-lg">
+                        <i class="fas fa-chart-line text-lg text-white"></i>
+                    </div>
+                    <div>
+                        <h1 class="text-lg font-extrabold tracking-tight text-slate-800">Studymetrics</h1>
+                        <p class="text-[10px] text-indigo-600 font-bold uppercase tracking-widest">Advanced Learning Analytics</p>
+                    </div>
+                </div>
+
+                <div class="flex items-center gap-2.5 bg-slate-50 px-3 py-1.5 rounded-xl border border-slate-200">
+                    <div class="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse" id="networkIndicator"></div>
+                    <div class="text-left">
+                        <div class="text-xs font-bold text-slate-700" id="avatarNameLabel">🐻 ニックネーム</div>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <!-- 非接続・デモモード警告バナー（Firebaseに繋がらない環境の場合のみ表示） -->
+        <div id="demoModeBanner" class="bg-amber-500 text-amber-950 text-xs font-bold py-2 px-4 text-center hidden">
+            <i class="fas fa-exclamation-triangle mr-1"></i> ネットワーク非接続 / デモモードで動作中（AIの勉強仲間とマッチング・シミュレーション体験ができます）
+        </div>
+
+        <div class="max-w-6xl w-full mx-auto px-4 py-6 flex-1 flex flex-col md:flex-row gap-6">
+            <!-- SIDE NAV -->
+            <aside class="md:w-64 shrink-0 flex flex-row md:flex-col gap-2 bg-white/60 p-2 rounded-2xl border border-slate-200/80 overflow-x-auto md:overflow-x-visible">
+                <button onclick="switchTab('dashboard')" id="nav-dashboard" class="nav-btn flex-1 md:flex-none flex items-center justify-center md:justify-start gap-3 px-4 py-3 rounded-xl font-bold text-sm transition-all text-indigo-600 bg-indigo-50 border border-indigo-100/50">
+                    <i class="fas fa-th-large text-base"></i> <span class="hidden md:inline">ダッシュボード</span>
+                </button>
+                <button onclick="switchTab('calendar')" id="nav-calendar" class="nav-btn flex-1 md:flex-none flex items-center justify-center md:justify-start gap-3 px-4 py-3 rounded-xl font-bold text-sm transition-all text-slate-500 hover:text-indigo-600 hover:bg-indigo-50/50">
+                    <i class="fas fa-calendar-alt text-base"></i> <span class="hidden md:inline">学習カレンダー</span>
+                </button>
+                <button onclick="switchTab('charts')" id="nav-charts" class="nav-btn flex-1 md:flex-none flex items-center justify-center md:justify-start gap-3 px-4 py-3 rounded-xl font-bold text-sm transition-all text-slate-500 hover:text-indigo-600 hover:bg-indigo-50/50">
+                    <i class="fas fa-chart-bar text-base"></i> <span class="hidden md:inline">グラフ・データ分析</span>
+                </button>
+                <button onclick="switchTab('tests')" id="nav-tests" class="nav-btn flex-1 md:flex-none flex items-center justify-center md:justify-start gap-3 px-4 py-3 rounded-xl font-bold text-sm transition-all text-slate-500 hover:text-indigo-600 hover:bg-indigo-50/50">
+                    <i class="fas fa-file-invoice text-base"></i> <span class="hidden md:inline">テスト成績管理</span>
+                </button>
+                <button onclick="switchTab('share')" id="nav-share" class="nav-btn flex-1 md:flex-none flex items-center justify-center md:justify-start gap-3 px-4 py-3 rounded-xl font-bold text-sm transition-all text-slate-500 hover:text-indigo-600 hover:bg-indigo-50/50">
+                    <i class="fas fa-globe text-base"></i> <span class="hidden md:inline">全体共有フィード</span>
+                </button>
+                <button onclick="switchTab('group')" id="nav-group" class="nav-btn flex-1 md:flex-none flex items-center justify-center md:justify-start gap-3 px-4 py-3 rounded-xl font-bold text-sm transition-all text-slate-500 hover:text-indigo-600 hover:bg-indigo-50/50">
+                    <i class="fas fa-users-rectangle text-base"></i> <span class="hidden md:inline">グループ勉強室</span>
+                </button>
+            </aside>
+
+            <!-- MAIN VIEWPORT -->
+            <main class="flex-1 min-w-0">
+                <!-- 1. DASHBOARD VIEW -->
+                <section id="tab-dashboard" class="tab-content active space-y-6">
+                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                        <div class="glass-card rounded-2xl p-4.5 flex items-center gap-4 bg-white p-4">
+                            <div class="w-12 h-12 rounded-xl bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center text-indigo-600 text-lg"><i class="fas fa-clock"></i></div>
+                            <div>
+                                <p class="text-[10px] text-slate-500 font-bold uppercase">今週の累計勉強時間</p>
+                                <p id="dashTotalHours" class="text-xl font-bold text-slate-800">0.0 時間</p>
+                            </div>
+                        </div>
+                        <div class="glass-card rounded-2xl p-4.5 flex items-center gap-4 bg-white p-4">
+                            <div class="w-12 h-12 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-600 text-lg"><i class="fas fa-bullseye"></i></div>
+                            <div>
+                                <p class="text-[10px] text-slate-500 font-bold uppercase">今日の目標</p>
+                                <p id="dashGoalsCount" class="text-xl font-bold text-slate-800">0 / 0 達成</p>
+                            </div>
+                        </div>
+                        <div class="glass-card rounded-2xl p-4.5 flex items-center gap-4 bg-white p-4">
+                            <div class="w-12 h-12 rounded-xl bg-violet-500/10 border border-violet-500/20 flex items-center justify-center text-violet-600 text-lg"><i class="fas fa-award"></i></div>
+                            <div>
+                                <p class="text-[10px] text-slate-500 font-bold uppercase">最近の平均テストスコア</p>
+                                <p id="dashAverageScore" class="text-xl font-bold text-slate-800">-- %</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Timer & Goals -->
+                    <div class="grid grid-cols-1 lg:grid-cols-5 gap-6">
+                        <div class="glass-card rounded-3xl p-6 border border-slate-200 lg:col-span-3 flex flex-col justify-between bg-white">
+                            <div class="flex justify-between items-center mb-6">
+                                <span class="text-xs font-bold text-indigo-600"><i class="fas fa-stopwatch mr-1.5"></i>学習タイマー</span>
+                                <div class="flex bg-slate-100 p-1 rounded-xl">
+                                    <button onclick="setTimerMode('pomodoro')" id="pomoBtn" class="px-3 py-1 bg-white text-indigo-600 rounded-lg text-xs font-bold shadow-sm">ポモドーロ</button>
+                                    <button onclick="setTimerMode('stopwatch')" id="stopBtn" class="px-3 py-1 text-slate-600 rounded-lg text-xs font-bold">計測</button>
+                                    <button onclick="setTimerMode('custom')" id="customTimerBtn" class="px-3 py-1 text-slate-600 rounded-lg text-xs font-bold">カスタム</button>
+                                </div>
+                            </div>
+                            <div class="flex flex-col items-center justify-center py-6">
+                                <div id="timerSubjectSelector" class="mb-4">
+                                    <div class="flex flex-wrap justify-center gap-1.5" id="subjectTagList"></div>
+                                </div>
+
+                                <div id="customTimerConfig" class="flex items-center gap-2 mb-4 hidden">
+                                    <button onclick="adjustCustomTimer(-5)" class="w-8 h-8 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 font-black border border-slate-200/80">-5m</button>
+                                    <input type="number" id="customTimerInput" min="1" max="300" class="w-16 px-2 py-1 text-center bg-slate-50 border rounded-lg font-bold text-sm text-slate-800" value="45" onchange="onCustomTimerInputChange(this.value)">
+                                    <span class="text-xs font-bold text-slate-500">分</span>
+                                    <button onclick="adjustCustomTimer(5)" class="w-8 h-8 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 font-black border border-slate-200/80">+5m</button>
+                                </div>
+
+                                <div id="timerDisplay" class="text-6xl font-extrabold font-mono text-slate-800 mb-2">25:00</div>
+                                <div id="timerActiveSubject" class="text-xs text-indigo-700 font-bold bg-indigo-50 px-3 py-1.5 rounded-full border hidden"></div>
+                            </div>
+                            <div class="flex gap-3 justify-center">
+                                <button id="timerControlBtn" onclick="toggleTimer()" class="px-8 py-3 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-xl shadow-lg transition-all flex items-center gap-2">
+                                    <i id="playIcon" class="fas fa-play"></i> <span id="playText">計測スタート</span>
+                                </button>
+                                <button onclick="resetTimer()" class="px-6 py-3 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold rounded-xl border">終了・記録</button>
+                            </div>
+                        </div>
+
+                        <div class="glass-card rounded-3xl p-6 border border-slate-200 lg:col-span-2 flex flex-col bg-white">
+                            <h3 class="text-sm font-bold text-slate-500 mb-4"><i class="fas fa-check-double mr-1.5 text-pink-500"></i>今日の目標</h3>
+                            <form onsubmit="addGoal(event)" class="flex gap-2 mb-4">
+                                <input type="text" id="goalInput" placeholder="数学ワーク 4ページ..." class="flex-1 px-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-indigo-500 font-semibold" required>
+                                <button type="submit" class="px-3 bg-indigo-600 text-white rounded-xl text-sm font-bold"><i class="fas fa-plus"></i></button>
+                            </form>
+                            <div id="goalsContainer" class="flex-1 space-y-2 overflow-y-auto max-h-[220px]"></div>
+                        </div>
+                    </div>
+
+                    <!-- 履歴ログと「全データ初期化ボタン」 -->
+                    <div class="glass-card rounded-3xl p-6 border border-slate-200 bg-white">
+                        <div class="flex justify-between items-center mb-4">
+                            <h3 class="text-sm font-bold text-slate-500"><i class="fas fa-history mr-1.5 text-slate-400"></i>学習アクティビティ履歴</h3>
+                            <div class="flex gap-3">
+                                <button onclick="clearLogs()" class="text-xs text-amber-600 hover:text-amber-700 font-semibold">履歴のみリセット</button>
+                                <button onclick="masterResetAllData()" class="text-xs text-red-500 hover:text-red-700 font-bold bg-red-50 px-2 py-1 rounded border border-red-200"><i class="fas fa-exclamation-triangle mr-1"></i>全データを初期化</button>
+                            </div>
+                        </div>
+                        <div id="dashboardLogs" class="space-y-2.5 overflow-y-auto max-h-[200px]"></div>
+                    </div>
+                </section>
+
+                <!-- 2. 学習カレンダー -->
+                <section id="tab-calendar" class="tab-content space-y-6">
+                    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                        <div class="glass-card rounded-3xl p-6 border border-slate-200 bg-white lg:col-span-2">
+                            <div class="flex justify-between items-center mb-4">
+                                <h3 class="text-sm font-bold text-slate-500 flex items-center gap-1.5">
+                                    <i class="fas fa-calendar-alt text-indigo-500"></i>学習スケジュール予定表
+                                </h3>
+                                <div class="flex items-center gap-2 bg-slate-100 p-1 rounded-xl border">
+                                    <button onclick="changeCalendarMonth(-1)" class="w-8 h-8 rounded-lg hover:bg-white text-slate-600 font-bold transition-all"><i class="fas fa-chevron-left"></i></button>
+                                    <span id="calendarMonthHeader" class="text-xs font-bold text-slate-800 min-w-[80px] text-center">2026年 6月</span>
+                                    <button onclick="changeCalendarMonth(1)" class="w-8 h-8 rounded-lg hover:bg-white text-slate-600 font-bold transition-all"><i class="fas fa-chevron-right"></i></button>
+                                </div>
+                            </div>
+                            
+                            <div class="grid grid-cols-7 gap-1.5 text-center text-xs font-bold text-slate-500 mb-2">
+                                <div class="text-red-500">日</div>
+                                <div>月</div>
+                                <div>火</div>
+                                <div>水</div>
+                                <div>木</div>
+                                <div>金</div>
+                                <div class="text-blue-500">土</div>
+                            </div>
+                            <div id="calendarDaysGrid" class="grid grid-cols-7 gap-1.5"></div>
+                        </div>
+
+                        <div class="glass-card rounded-3xl p-6 border border-slate-200 bg-white lg:col-span-1 flex flex-col justify-between">
+                            <div>
+                                <h4 class="text-xs font-bold text-slate-400 mb-3 uppercase tracking-wider">
+                                    <i class="fas fa-calendar-day mr-1"></i>
+                                    <span id="lblSelectedDateHeader">予定の読み込み中</span>
+                                </h4>
+
+                                <form onsubmit="addCalendarEvent(event)" class="space-y-3 mb-4 border-b pb-4">
+                                    <input type="text" id="calendarEventInput" placeholder="予定・勉強計画を入力..." class="w-full px-3 py-2 bg-slate-50 border rounded-xl text-xs font-semibold focus:outline-none focus:border-indigo-500" required>
+                                    <div class="grid grid-cols-2 gap-2">
+                                        <select id="calendarEventCategory" class="px-2 py-1.5 bg-slate-50 border rounded-xl text-[11px] font-bold text-slate-600">
+                                            <option value="study">📚 勉強</option>
+                                            <option value="test">📝 テスト・模試</option>
+                                            <option value="rest">🍀 休憩・お休み</option>
+                                            <option value="other">⭐ その他</option>
+                                        </select>
+                                        <button type="submit" class="bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-xs font-bold py-1.5">予定を追加</button>
+                                    </div>
+                                </form>
+
+                                <div id="dayEventsContainer" class="space-y-2 max-h-[220px] overflow-y-auto pr-1"></div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- 3. ANALYTICS VIEW -->
+                <section id="tab-charts" class="tab-content space-y-6">
+                    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                        <div class="glass-card rounded-3xl p-6 border border-slate-200 bg-white">
+                            <h3 class="text-sm font-bold text-slate-500 mb-4"><i class="fas fa-chart-pie mr-1.5 text-indigo-500"></i>学習比率バランス</h3>
+                            <div class="relative w-full aspect-square flex items-center justify-center max-h-[240px]">
+                                <canvas id="ratioChart"></canvas>
+                                <div id="ratioChartFallback" class="absolute inset-0 bg-white/95 flex items-center justify-center text-xs text-slate-400 font-bold hidden">勉強履歴が登録されていません</div>
+                            </div>
+                        </div>
+                        <div class="glass-card rounded-3xl p-6 border border-slate-200 lg:col-span-2 bg-white">
+                            <div class="flex justify-between items-center mb-4">
+                                <h3 class="text-sm font-bold text-slate-500"><i class="fas fa-chart-bar mr-1.5 text-emerald-500"></i>過去7日間の学習推移</h3>
+                                <span class="text-xs text-slate-500 font-bold" id="weeklyTotalLabel">合計 : 0時間</span>
+                            </div>
+                            <div class="w-full h-[240px]"><canvas id="weeklyProgressionChart"></canvas></div>
+                        </div>
+                    </div>
+                    <div class="glass-card rounded-3xl p-6 border border-slate-200 bg-white">
+                        <h3 class="text-sm font-bold text-slate-500 mb-4"><i class="fas fa-wave-square mr-1.5 text-violet-500"></i>試験別成績推移グラフ</h3>
+                        <div class="w-full h-[300px]"><canvas id="testProgressionChart"></canvas></div>
+                    </div>
+                </section>
+
+                <!-- 4. TEST MANAGEMENT VIEW -->
+                <section id="tab-tests" class="tab-content space-y-6">
+                    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                        <div class="glass-card rounded-3xl p-6 border border-slate-200 lg:col-span-1 bg-white">
+                            <h3 class="text-sm font-bold text-slate-700 mb-4"><i class="fas fa-plus-circle mr-1.5 text-indigo-500"></i>テスト結果の追加</h3>
+                            <form onsubmit="addTestResult(event)" class="space-y-3.5">
+                                <input type="text" id="testNameInput" placeholder="例: 中間試験" class="w-full px-3 py-2 bg-slate-50 border rounded-xl text-sm" required>
+                                <div class="grid grid-cols-2 gap-3">
+                                    <select id="testSubjectInput" class="w-full px-3 py-2 bg-slate-50 border rounded-xl text-sm"></select>
+                                    <input type="date" id="testDateInput" class="w-full px-3 py-2 bg-slate-50 border rounded-xl text-sm" required>
+                                </div>
+                                <div class="grid grid-cols-2 gap-3">
+                                    <input type="number" id="testScoreInput" placeholder="得点" class="w-full px-3 py-2 bg-slate-50 border rounded-xl text-sm" required>
+                                    <input type="number" id="testMaxScoreInput" placeholder="満点" class="w-full px-3 py-2 bg-slate-50 border rounded-xl text-sm" required>
+                                </div>
+                                <button type="submit" class="w-full py-2.5 bg-indigo-600 text-white rounded-xl text-sm font-bold">結果を保存</button>
+                            </form>
+                        </div>
+                        <div class="glass-card rounded-3xl p-6 border border-slate-200 lg:col-span-2 bg-white">
+                            <div class="flex justify-between items-center mb-4">
+                                <h3 class="text-sm font-bold text-slate-500"><i class="fas fa-table mr-1.5 text-slate-400"></i>登録済みの試験一覧</h3>
+                                <button onclick="clearTestRecords()" class="text-xs text-red-500 font-semibold">全削除</button>
+                            </div>
+                            <div class="overflow-x-auto">
+                                <table class="w-full text-left">
+                                    <thead>
+                                        <tr class="border-b text-slate-500 text-xs font-bold">
+                                            <th class="py-2 px-3">試験名</th>
+                                            <th class="py-2 px-3">科目</th>
+                                            <th class="py-2 px-3">日程</th>
+                                            <th class="py-2 px-3 text-right">スコア</th>
+                                            <th class="py-2 px-3 text-right">パーセント</th>
+                                            <th class="py-2 px-3">操作</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="testRecordsList" class="divide-y text-sm text-slate-700 font-semibold"></tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- 5. REAL-TIME PUBLIC SHARE VIEW (全体共有タイムライン) -->
+                <section id="tab-share" class="tab-content space-y-6">
+                    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                        <div class="glass-card rounded-3xl p-6 border border-slate-200 lg:col-span-1 bg-white flex flex-col justify-between">
+                            <div>
+                                <h3 class="text-sm font-bold text-slate-700 mb-2"><i class="fas fa-bullhorn mr-1.5 text-amber-500"></i>全体に今日の自習を共有</h3>
+                                <p class="text-xs text-slate-500 leading-relaxed mb-4">全国のみんなが学習タイムラインで勉強成果を共有しています。一言コメントを投稿してみましょう！</p>
+                                
+                                <div class="space-y-4">
+                                    <div class="bg-slate-50 p-4 rounded-2xl border border-slate-200">
+                                        <p class="text-[10px] text-slate-400 font-bold uppercase">一緒に公開される今日のスタッツ</p>
+                                        <div class="grid grid-cols-2 gap-2 mt-2">
+                                            <div class="bg-white p-2.5 rounded-xl border border-slate-200 shadow-sm">
+                                                <span class="text-[9px] text-slate-400 block font-semibold leading-none">今日の勉強時間</span>
+                                                <span id="shareTotalHours" class="text-sm font-extrabold text-slate-800 mt-1 block">0分</span>
+                                            </div>
+                                            <div class="bg-white p-2.5 rounded-xl border border-slate-200 shadow-sm">
+                                                <span class="text-[9px] text-slate-400 block font-semibold leading-none">完了目標</span>
+                                                <span id="shareTotalQuests" class="text-sm font-extrabold text-slate-800 mt-1 block">0件</span>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <form onsubmit="postShare(event)" class="space-y-3">
+                                        <textarea id="shareMsgInput" placeholder="今日は英語のリスニングを頑張ったよ！" maxlength="120" rows="3" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-800 focus:outline-none focus:border-indigo-500 resize-none font-semibold" required></textarea>
+                                        <button type="submit" class="w-full py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-sm font-bold transition-all">全体フィードへ投稿</button>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="glass-card rounded-3xl p-6 border border-slate-200 lg:col-span-2 bg-white">
+                            <div class="flex justify-between items-center mb-4">
+                                <h3 class="text-sm font-bold text-slate-500"><i class="fas fa-globe mr-1.5 text-indigo-500"></i>みんなの勉強ルーム (全体公開タイムライン)</h3>
+                                <button onclick="refreshShares()" class="text-xs text-indigo-500 hover:text-indigo-600 font-bold"><i class="fas fa-sync-alt mr-1"></i>更新</button>
+                            </div>
+                            <div id="shareTimeline" class="space-y-3 max-h-[460px] overflow-y-auto pr-1">
+                                <p class="text-xs text-slate-400 text-center py-12">タイムラインを読み込んでいます...</p>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- 6. PRIVATE GROUP VIEW -->
+                <section id="tab-group" class="tab-content space-y-6">
+                    <!-- Unjoined State -->
+                    <div id="groupUnjoinedSection" class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div class="glass-card rounded-3xl p-6 border border-slate-200 bg-white">
+                            <h3 class="text-lg font-bold text-slate-800 flex items-center gap-2 mb-2"><i class="fas fa-key text-indigo-500"></i> グループに合流する</h3>
+                            <p class="text-xs text-slate-500 leading-relaxed mb-6">友達から教えてもらった6桁の「招待コード」を入力して、プライベートグループに参加します。</p>
+                            <form onsubmit="joinGroupWithCode(event)" class="space-y-4">
+                                <input type="text" id="groupCodeJoinInput" placeholder="例: X8G3K2" maxlength="6" class="w-full px-4 py-2.5 bg-slate-50 border-2 border-slate-200 rounded-xl text-center font-mono text-lg font-bold tracking-widest text-slate-800 uppercase focus:outline-none focus:border-indigo-500" required>
+                                <button type="submit" class="w-full py-3 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-sm font-bold shadow-md">参加する</button>
+                            </form>
+                        </div>
+                        <div class="glass-card rounded-3xl p-6 border border-slate-200 bg-white">
+                            <h3 class="text-lg font-bold text-slate-800 flex items-center gap-2 mb-2"><i class="fas fa-plus-circle text-emerald-500"></i> 新しいグループを作成</h3>
+                            <p class="text-xs text-slate-500 leading-relaxed mb-6">あなたがリーダーになってグループ部屋を立ち上げます。自動的に専用の招待コードが発行されます。</p>
+                            <form onsubmit="createGroup(event)" class="space-y-4">
+                                <input type="text" id="groupNameCreateInput" placeholder="例: テスト勉強会 / 朝活チーム" maxlength="15" class="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-800 focus:outline-none focus:border-indigo-500 font-semibold" required>
+                                <button type="submit" class="w-full py-3 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-sm font-bold shadow-md">グループを作成</button>
+                            </form>
+                        </div>
+                    </div>
+
+                    <!-- Joined State (Real-time synced workspace) -->
+                    <div id="groupJoinedSection" class="grid grid-cols-1 lg:grid-cols-3 gap-6 hidden">
+                        <div class="lg:col-span-1 space-y-6">
+                            <!-- Info Panel -->
+                            <div class="glass-card rounded-3xl p-6 border border-slate-200 bg-white space-y-4">
+                                <div class="flex justify-between items-start">
+                                    <div>
+                                        <span class="text-[9px] bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded font-black">STUDY GROUP</span>
+                                        <h3 id="lblGroupName" class="text-lg font-bold text-slate-800 mt-1.5">グループ名</h3>
+                                    </div>
+                                    <div id="badgeLeaderCrown" class="text-amber-500 hidden text-lg" title="あなたがリーダーです"><i class="fas fa-crown"></i></div>
+                                </div>
+
+                                <div class="bg-indigo-50/70 p-3.5 rounded-2xl border border-indigo-100/50 flex flex-col items-center justify-center text-center">
+                                    <p class="text-[9px] text-indigo-500 font-bold uppercase tracking-wider">招待コード (クリックでコピー)</p>
+                                    <button onclick="copyGroupCode()" id="lblGroupCode" class="font-mono text-2xl font-black text-indigo-600 hover:text-indigo-500 mt-1 tracking-widest cursor-pointer select-all">------</button>
+                                </div>
+
+                                <!-- Members List with Stats Share -->
+                                <div>
+                                    <h4 class="text-xs font-bold text-slate-500 mb-2.5"><i class="fas fa-users mr-1"></i> リアルタイム学習進捗メンバー</h4>
+                                    <div id="groupMembersList" class="space-y-2 max-h-[220px] overflow-y-auto pr-1"></div>
+                                </div>
+
+                                <div class="pt-4 border-t border-slate-100 flex flex-col gap-2">
+                                    <button id="btnGroupExit" onclick="exitCurrentGroup()" class="w-full py-2 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-xl text-xs font-bold border border-slate-200">退会する</button>
+                                    <button id="btnGroupDestroy" onclick="deleteCurrentGroup()" class="w-full py-2 bg-red-50 hover:bg-red-100 text-red-600 rounded-xl text-xs font-bold border border-red-100 hidden">グループを解散（リーダー権限）</button>
+                                </div>
+                            </div>
+
+                            <!-- Leader Control Panel -->
+                            <div id="leaderControlPanel" class="glass-card rounded-3xl p-6 border-2 border-amber-300 bg-white space-y-4 hidden">
+                                <h3 class="text-xs font-black text-amber-600 tracking-wider flex items-center gap-1.5"><i class="fas fa-crown"></i> リーダー管理パネル</h3>
+                                <form onsubmit="updateGroupNameByLeader(event)" class="space-y-3">
+                                    <div class="flex gap-2">
+                                        <input type="text" id="leaderGroupNameInput" placeholder="新グループ名" class="flex-1 px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-800 focus:outline-none" required>
+                                        <button type="submit" class="px-3 bg-amber-500 hover:bg-amber-400 text-slate-900 rounded-xl text-xs font-bold">変更</button>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+
+                        <!-- Group Chat Panel -->
+                        <div class="lg:col-span-2 glass-card rounded-3xl p-6 border border-slate-200 bg-white flex flex-col h-[520px]">
+                            <div class="border-b border-slate-100 pb-3 flex justify-between items-center shrink-0">
+                                <h4 class="font-bold text-sm text-slate-700 flex items-center gap-1.5">
+                                    <span class="w-2.5 h-2.5 rounded-full bg-indigo-500"></span> グループ専用チャット
+                                </h4>
+                            </div>
+                            <div id="groupChatContainer" class="flex-1 overflow-y-auto my-4 space-y-3 pr-1"></div>
+                            <form onsubmit="postGroupMessage(event)" class="flex gap-2 shrink-0">
+                                <input type="text" id="groupChatMsgInput" placeholder="グループにメッセージを送信..." maxlength="150" class="flex-1 px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-2xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 text-slate-800" required>
+                                <button type="submit" class="px-5 bg-indigo-600 text-white rounded-2xl text-sm font-bold flex items-center justify-center"><i class="fas fa-paper-plane"></i></button>
+                            </form>
+                        </div>
+                    </div>
+                </section>
+            </main>
+        </div>
+    </div>
+
+    <!-- TOAST -->
+    <div id="toast" class="fixed bottom-6 right-6 px-4 py-2.5 rounded-xl bg-indigo-600 text-sm font-bold text-white shadow-2xl transition-all duration-300 opacity-0 pointer-events-none transform translate-y-3 z-50 flex items-center gap-2">
+        <i class="fas fa-info-circle"></i> <span id="toastMessage">完了しました！</span>
+    </div>
+
+    <script>
+        // --- DATA & STATES ---
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'studymetrics-default';
+        let db = null;
+        let auth = null;
+        let user = null;
+        let isDemoMode = false; // Firebaseの通信エラーや未設定を検出するためのフラグ
+
+        const defaultAvatars = ["🐻", "🦊", "🐱", "🐼", "🦁", "🦉", "🐨", "🐰", "🐸", "🦖", "🦄"];
+        let selectedAvatarEmoji = "🐻";
+        let userNick = "";
+        let activeSubject = 'english';
+
+        const subjects = {
+            english: { name: "英語", color: "#6366f1", bg: "rgba(99, 102, 241, 0.15)", border: "#4f46e5" },
+            math: { name: "数学", color: "#0ea5e9", bg: "rgba(14, 165, 233, 0.15)", border: "#0284c7" },
+            japanese: { name: "国語", color: "#10b981", bg: "rgba(16, 185, 129, 0.15)", border: "#059669" },
+            science: { name: "理科", color: "#f59e0b", bg: "rgba(245, 158, 11, 0.15)", border: "#d97706" },
+            social: { name: "社会", color: "#8b5cf6", bg: "rgba(139, 92, 246, 0.15)", border: "#9333ea" },
+            other: { name: "その他", color: "#64748b", bg: "rgba(100, 116, 139, 0.15)", border: "#475569" }
+        };
+
+        let studyLog = [];
+        let goalsList = [];
+        let testRecords = [];
+        
+        let calendarEvents = [];
+        let currentCalendarDate = new Date();
+        let selectedCalendarDateStr = new Date().toISOString().split('T')[0];
+        
+        let joinedGroupCode = "";
+        let activeGroupData = null;
+
+        let timerMode = "pomodoro";
+        let timerState = "stopped";
+        let countdownSeconds = 25 * 60;
+        let elapsedSeconds = 0;
+        let timerInterval = null;
+        let customTimerMinutes = 45;
+        let editingGoalIndex = null;
+
+        let ratioChartInstance = null;
+        let progressionChartInstance = null;
+        let testProgressionChartInstance = null;
+
+        let timelineUnsubscribe = null;
+        let groupUnsubscribe = null;
+
+        // --- MOCK DATABASE (デモモード用データベース) ---
+        let mockShares = [
+            { id: "mock1", userNick: "さくら#242", userAvatar: "🦊", comment: "模試に向けて英語の過去問を必死に解きました！手応えアリです！", totalMinutes: 120, questsDone: 3, likes: 5, timestamp: Date.now() - 3600000 * 2 },
+            { id: "mock2", userNick: "たくや#801", userAvatar: "🐼", comment: "今日は数学の微積分にかなり手こずった...。でも40分間集中して頑張れた！", totalMinutes: 40, questsDone: 1, likes: 2, timestamp: Date.now() - 3600000 * 5 }
+        ];
+
+        let mockGroups = {};
+
+        // --- FIREBASE INITIALIZATION & AUTH (RULES 1, 2, 3) ---
+        async function initFirebase() {
+            try {
+                if (typeof __firebase_config !== 'undefined' && __firebase_config) {
+                    const firebaseConfig = JSON.parse(__firebase_config);
+                    if (firebase.apps.length === 0) {
+                        firebase.initializeApp(firebaseConfig);
+                    }
+                    auth = firebase.auth();
+                    db = firebase.firestore();
+
+                    // RULE 3 Custom or Anonymous auth FIRST
+                    if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token && __initial_auth_token !== "") {
+                        await auth.signInWithCustomToken(__initial_auth_token);
+                    } else {
+                        await auth.signInAnonymously();
+                    }
+
+                    auth.onAuthStateChanged(usr => {
+                        if (usr) {
+                            user = usr;
+                            isDemoMode = false;
+                            document.getElementById('networkIndicator').className = "w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse";
+                            document.getElementById('demoModeBanner').classList.add('hidden');
+                            startSharesTimelineListener();
+                            if (joinedGroupCode) {
+                                syncStudyGroupRealtime();
+                            }
+                        }
+                    });
+                } else {
+                    enableDemoMode();
+                }
+            } catch (err) {
+                console.warn("Firebase connection failed. Enabling demo mode.", err);
+                enableDemoMode();
+            }
+        }
+
+        // デモモードへの移行処理
+        function enableDemoMode() {
+            isDemoMode = true;
+            document.getElementById('networkIndicator').className = "w-2.5 h-2.5 rounded-full bg-amber-500";
+            document.getElementById('demoModeBanner').classList.remove('hidden');
+            
+            // ローカルストレージに保存されているモックグループやタイムラインを読み込む
+            if (localStorage.getItem("studymetrics_mock_shares")) {
+                mockShares = JSON.parse(localStorage.getItem("studymetrics_mock_shares"));
+            }
+            if (localStorage.getItem("studymetrics_mock_groups")) {
+                mockGroups = JSON.parse(localStorage.getItem("studymetrics_mock_groups"));
+            }
+            
+            renderTimelineShares(mockShares);
+            if (joinedGroupCode) {
+                syncStudyGroupRealtime();
+            }
+        }
+
+        // --- LOADING AND PERSISTING ---
+        function loadLocalData() {
+            if (localStorage.getItem("studymetrics_log")) studyLog = JSON.parse(localStorage.getItem("studymetrics_log"));
+            if (localStorage.getItem("studymetrics_goals")) goalsList = JSON.parse(localStorage.getItem("studymetrics_goals"));
+            if (localStorage.getItem("studymetrics_tests")) testRecords = JSON.parse(localStorage.getItem("studymetrics_tests"));
+            if (localStorage.getItem("studymetrics_joinedGroupCode")) joinedGroupCode = localStorage.getItem("studymetrics_joinedGroupCode");
+            
+            if (localStorage.getItem("studymetrics_calendar_events")) {
+                calendarEvents = JSON.parse(localStorage.getItem("studymetrics_calendar_events"));
+            }
+            if (localStorage.getItem("studymetrics_custom_timer_minutes")) {
+                customTimerMinutes = parseInt(localStorage.getItem("studymetrics_custom_timer_minutes"));
+                document.getElementById("customTimerInput").value = customTimerMinutes;
+            }
+
+            if (!localStorage.getItem("studymetrics_userNick")) {
+                document.getElementById('welcomeOverlay').classList.remove('hidden');
+                document.getElementById('appContainer').classList.add('blur-sm');
+                initSetupViews();
+            } else {
+                userNick = localStorage.getItem("studymetrics_userNick");
+                selectedAvatarEmoji = localStorage.getItem("studymetrics_userAvatar") || "🐻";
+                document.getElementById('avatarNameLabel').textContent = `${selectedAvatarEmoji} ${userNick}`;
+                document.getElementById('welcomeOverlay').classList.add('hidden');
+                document.getElementById('appContainer').classList.remove('blur-sm');
+            }
+
+            renderSubjectPills();
+            renderGoalsList();
+            renderLogsList();
+            renderTestRecordsTable();
+            updateDashboardCards();
+            updateSubjectDropdown();
+            renderCalendar();
+            renderSelectedDayEvents();
+        }
+
+        function saveLocalData() {
+            localStorage.setItem("studymetrics_log", JSON.stringify(studyLog));
+            localStorage.setItem("studymetrics_goals", JSON.stringify(goalsList));
+            localStorage.setItem("studymetrics_tests", JSON.stringify(testRecords));
+            localStorage.setItem("studymetrics_calendar_events", JSON.stringify(calendarEvents));
+            localStorage.setItem("studymetrics_custom_timer_minutes", customTimerMinutes);
+            localStorage.setItem("studymetrics_userNick", userNick);
+            localStorage.setItem("studymetrics_userAvatar", selectedAvatarEmoji);
+            localStorage.setItem("studymetrics_joinedGroupCode", joinedGroupCode);
+            
+            // デモモード用データのストレージセーブ
+            if (isDemoMode) {
+                localStorage.setItem("studymetrics_mock_shares", JSON.stringify(mockShares));
+                localStorage.setItem("studymetrics_mock_groups", JSON.stringify(mockGroups));
+            }
+            
+            updateMyGroupProgressOnCloud();
+        }
+
+        function masterResetAllData() {
+            if (confirm("【警告】アプリ内の全ての勉強データ、テスト成績、スケジュールカレンダー、目標タスク、プロフィール設定を完全に削除しますか？")) {
+                clearInterval(timerInterval);
+                localStorage.clear();
+                studyLog = [];
+                goalsList = [];
+                testRecords = [];
+                calendarEvents = [];
+                userNick = "";
+                selectedAvatarEmoji = "🐻";
+                timerState = "stopped";
+                joinedGroupCode = "";
+                activeGroupData = null;
+                editingGoalIndex = null;
+                customTimerMinutes = 45;
+                setTimerMode("pomodoro");
+
+                if (groupUnsubscribe) { groupUnsubscribe(); groupUnsubscribe = null; }
+                document.getElementById('groupJoinedSection').classList.add('hidden');
+                document.getElementById('groupUnjoinedSection').classList.remove('hidden');
+
+                showToast("全てのデータを初期化しました。");
+                loadLocalData();
+                if (ratioChartInstance) { ratioChartInstance.destroy(); ratioChartInstance = null; }
+                if (progressionChartInstance) { progressionChartInstance.destroy(); progressionChartInstance = null; }
+                if (testProgressionChartInstance) { testProgressionChartInstance.destroy(); testProgressionChartInstance = null; }
+            }
+        }
+
+        // --- WELCOME SETUP ---
+        function initSetupViews() {
+            const grid = document.getElementById('avatarSelectorGrid');
+            grid.innerHTML = "";
+            defaultAvatars.forEach(av => {
+                const btn = document.createElement('button');
+                btn.className = `w-11 h-11 text-2xl flex items-center justify-center rounded-xl border-2 ${
+                    av === selectedAvatarEmoji ? 'border-indigo-500 bg-indigo-50' : 'border-slate-100 bg-slate-50'
+                }`;
+                btn.textContent = av;
+                btn.onclick = () => { selectedAvatarEmoji = av; initSetupViews(); };
+                grid.appendChild(btn);
+            });
+            document.getElementById('welcomeNickInput').value = "スマート学士";
+        }
+
+        function submitWelcomeSetup() {
+            const nick = document.getElementById('welcomeNickInput').value.trim();
+            if (!nick) return;
+            userNick = nick;
+            saveLocalData();
+            loadLocalData();
+            initFirebase();
+        }
+
+        // --- UI & NAV ---
+        function switchTab(tabId) {
+            document.querySelectorAll('.tab-content').forEach(tab => tab.classList.remove('active'));
+            document.querySelectorAll('.nav-btn').forEach(btn => btn.className = "nav-btn flex-1 md:flex-none flex items-center justify-center md:justify-start gap-3 px-4 py-3 rounded-xl font-bold text-sm text-slate-500 hover:bg-indigo-50/50");
+            document.getElementById(`tab-${tabId}`).classList.add('active');
+            document.getElementById(`nav-${tabId}`).className = "nav-btn flex-1 md:flex-none flex items-center justify-center md:justify-start gap-3 px-4 py-3 rounded-xl font-bold text-sm text-indigo-600 bg-indigo-50 border border-indigo-100/50";
+            
+            if (tabId === 'charts') {
+                setTimeout(updateCharts, 50);
+            } else if (tabId === 'calendar') {
+                renderCalendar();
+                renderSelectedDayEvents();
+            }
+        }
+
+        function renderSubjectPills() {
+            const list = document.getElementById('subjectTagList');
+            list.innerHTML = "";
+            for (let key in subjects) {
+                const sub = subjects[key];
+                const isActive = activeSubject === key;
+                const btn = document.createElement('button');
+                btn.className = `px-3.5 py-1.5 rounded-xl text-xs font-bold border ${isActive ? 'text-white' : 'text-slate-600 bg-slate-50'}`;
+                btn.style.backgroundColor = isActive ? sub.color : 'transparent';
+                btn.textContent = sub.name;
+                btn.onclick = () => { if (timerState === "stopped") { activeSubject = key; renderSubjectPills(); } };
+                list.appendChild(btn);
+            }
+        }
+
+        function updateSubjectDropdown() {
+            const dropdown = document.getElementById('testSubjectInput');
+            dropdown.innerHTML = "";
+            for (let key in subjects) {
+                const opt = document.createElement('option');
+                opt.value = key; opt.textContent = subjects[key].name; dropdown.appendChild(opt);
+            }
+        }
+
+        // --- TIMER PROCESS (WITH CUSTOM OPTION) ---
+        function setTimerMode(mode) {
+            if (timerState !== "stopped") return;
+            timerMode = mode;
+            
+            document.getElementById('pomoBtn').className = timerMode === 'pomodoro' 
+                ? 'px-3 py-1 bg-white text-indigo-600 rounded-lg text-xs font-bold shadow-sm'
+                : 'px-3 py-1 text-slate-600 rounded-lg text-xs font-bold';
+            document.getElementById('stopBtn').className = timerMode === 'stopwatch' 
+                ? 'px-3 py-1 bg-white text-indigo-600 rounded-lg text-xs font-bold shadow-sm'
+                : 'px-3 py-1 text-slate-600 rounded-lg text-xs font-bold';
+            document.getElementById('customTimerBtn').className = timerMode === 'custom' 
+                ? 'px-3 py-1 bg-white text-indigo-600 rounded-lg text-xs font-bold shadow-sm'
+                : 'px-3 py-1 text-slate-600 rounded-lg text-xs font-bold';
+
+            const customConfigEl = document.getElementById('customTimerConfig');
+
+            if (timerMode === 'pomodoro') {
+                customConfigEl.classList.add('hidden');
+                countdownSeconds = 25 * 60;
+                document.getElementById('timerDisplay').textContent = "25:00";
+            } else if (timerMode === 'stopwatch') {
+                customConfigEl.classList.add('hidden');
+                elapsedSeconds = 0;
+                document.getElementById('timerDisplay').textContent = "00:00";
+            } else if (timerMode === 'custom') {
+                customConfigEl.classList.remove('hidden');
+                countdownSeconds = customTimerMinutes * 60;
+                formatTimerDisplay(countdownSeconds);
+            }
+        }
+
+        function adjustCustomTimer(minutesDiff) {
+            if (timerState !== "stopped") return;
+            customTimerMinutes = Math.max(1, Math.min(300, customTimerMinutes + minutesDiff));
+            document.getElementById("customTimerInput").value = customTimerMinutes;
+            countdownSeconds = customTimerMinutes * 60;
+            formatTimerDisplay(countdownSeconds);
+            saveLocalData();
+        }
+
+        function onCustomTimerInputChange(val) {
+            if (timerState !== "stopped") return;
+            let m = parseInt(val);
+            if (isNaN(m) || m < 1) m = 1;
+            if (m > 300) m = 300;
+            customTimerMinutes = m;
+            document.getElementById("customTimerInput").value = customTimerMinutes;
+            countdownSeconds = customTimerMinutes * 60;
+            formatTimerDisplay(countdownSeconds);
+            saveLocalData();
+        }
+
+        function toggleTimer() {
+            if (timerState === 'stopped' || timerState === 'paused') {
+                playSynthesizerSound(440, 0.1, 'sine');
+                timerState = "running";
+                document.getElementById('playIcon').className = "fas fa-pause";
+                document.getElementById('playText').textContent = "一時停止";
+                document.getElementById('timerSubjectSelector').classList.add('hidden');
+                document.getElementById('customTimerConfig').classList.add('hidden');
+                
+                if (timerMode === 'pomodoro' || timerMode === 'custom') {
+                    timerInterval = setInterval(() => {
+                        countdownSeconds--; formatTimerDisplay(countdownSeconds);
+                        if (countdownSeconds <= 0) {
+                            let totalSecs = timerMode === 'pomodoro' ? 25 * 60 : customTimerMinutes * 60;
+                            completeStudySession(totalSecs);
+                        }
+                    }, 1000);
+                } else {
+                    timerInterval = setInterval(() => { elapsedSeconds++; formatTimerDisplay(elapsedSeconds); }, 1000);
+                }
+            } else {
+                timerState = "paused";
+                document.getElementById('playIcon').className = "fas fa-play";
+                document.getElementById('playText').textContent = "計測を再開";
+                clearInterval(timerInterval);
+            }
+        }
+
+        function resetTimer() {
+            if (timerState === 'stopped') return;
+            clearInterval(timerInterval);
+            let secs = timerMode === 'pomodoro' ? (25 * 60) - countdownSeconds : elapsedSeconds;
+            timerState = "stopped";
+            document.getElementById('playIcon').className = "fas fa-play";
+            document.getElementById('playText').textContent = "計測スタート";
+            document.getElementById('timerSubjectSelector').classList.remove('hidden');
+            
+            if (secs >= 10) completeStudySession(secs);
+            else showToast("10秒未満のデータは保存されませんでした");
+            setTimerMode(timerMode);
+        }
+
+        function formatTimerDisplay(ts) {
+            const m = Math.floor(ts / 60); const s = ts % 60;
+            document.getElementById('timerDisplay').textContent = `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+        }
+
+        function completeStudySession(secs) {
+            studyLog.unshift({ subject: activeSubject, seconds: secs, timestamp: Date.now() });
+            saveLocalData(); loadLocalData();
+            showToast("学習データを記録しました！");
+            playSynthesizerSound(660, 0.3, 'triangle');
+        }
+
+        // --- GOALS TASK (WITH INLINE EDITING) ---
+        function renderGoalsList() {
+            const container = document.getElementById('goalsContainer'); container.innerHTML = "";
+            if (goalsList.length === 0) { container.innerHTML = `<p class="text-xs text-slate-400 py-4 text-center">タスクはありません</p>`; return; }
+            goalsList.forEach((goal, i) => {
+                const div = document.createElement('div');
+                div.className = "flex justify-between items-center p-2.5 bg-slate-50 border rounded-xl text-xs";
+                
+                if (editingGoalIndex === i) {
+                    div.innerHTML = `
+                        <div class="flex items-center gap-2 flex-1 mr-2">
+                            <input type="text" id="inlineGoalEditInput" class="w-full px-2 py-1 bg-white border border-indigo-200 rounded-lg text-xs font-semibold focus:outline-none focus:ring-1 focus:ring-indigo-500" value="${escapeHTML(goal.text)}">
+                        </div>
+                        <div class="flex gap-1.5 shrink-0">
+                            <button onclick="saveGoalInline(${i})" class="text-xs text-emerald-600 font-bold hover:text-emerald-700 bg-emerald-50 px-2 py-1 rounded border border-emerald-200">保存</button>
+                            <button onclick="cancelGoalInline()" class="text-xs text-slate-500 font-bold hover:text-slate-600 bg-slate-200 px-2 py-1 rounded">キャンセル</button>
+                        </div>
+                    `;
+                } else {
+                    div.innerHTML = `
+                        <div class="flex items-center gap-2 min-w-0 flex-1">
+                            <button onclick="toggleGoal(${i})" class="w-5 h-5 rounded border ${goal.done ? 'bg-indigo-500 text-white' : 'text-transparent'} shrink-0"><i class="fas fa-check text-[10px]"></i></button>
+                            <span class="truncate ${goal.done ? 'line-through text-slate-400 font-medium' : 'text-slate-700 font-semibold'}">${escapeHTML(goal.text)}</span>
+                        </div>
+                        <div class="flex items-center gap-1.5 shrink-0 ml-2">
+                            <button onclick="startEditGoal(${i})" class="text-slate-400 hover:text-indigo-600 p-1" title="目標の修正"><i class="fas fa-pencil-alt text-[11px]"></i></button>
+                            <button onclick="deleteGoal(${i})" class="text-slate-400 hover:text-red-500 p-1" title="削除"><i class="fas fa-trash text-[11px]"></i></button>
+                        </div>
+                    `;
+                }
+                container.appendChild(div);
+            });
+        }
+
+        function startEditGoal(index) {
+            editingGoalIndex = index;
+            renderGoalsList();
+        }
+
+        function cancelGoalInline() {
+            editingGoalIndex = null;
+            renderGoalsList();
+        }
+
+        function saveGoalInline(index) {
+            const input = document.getElementById("inlineGoalEditInput");
+            const newText = input.value.trim();
+            if (!newText) return;
+            
+            goalsList[index].text = newText;
+            editingGoalIndex = null;
+            saveLocalData();
+            renderGoalsList();
+            showToast("目標を修正しました！");
+        }
+
+        function addGoal(e) {
+            e.preventDefault(); const input = document.getElementById('goalInput');
+            goalsList.push({ text: input.value.trim(), done: false });
+            input.value = ""; saveLocalData(); renderGoalsList(); updateDashboardCards();
+        }
+
+        function toggleGoal(i) { goalsList[i].done = !goalsList[i].done; saveLocalData(); renderGoalsList(); updateDashboardCards(); }
+        function deleteGoal(i) { goalsList.splice(i, 1); saveLocalData(); renderGoalsList(); updateDashboardCards(); }
+
+
+        // --- LOGS & RECORDS ---
+        function renderLogsList() {
+            const container = document.getElementById('dashboardLogs'); container.innerHTML = "";
+            if (studyLog.length === 0) { container.innerHTML = `<p class="text-xs text-slate-400 py-4 text-center">履歴はありません</p>`; return; }
+            studyLog.slice(0, 10).forEach(log => {
+                const div = document.createElement('div'); div.className = "flex justify-between bg-slate-50 border p-2.5 rounded-xl text-xs";
+                div.innerHTML = `<span><i class="fas fa-circle mr-2" style="color:${subjects[log.subject].color}"></i>${subjects[log.subject].name}</span><span class="font-bold">${Math.max(1, Math.round(log.seconds/60))}分</span>`;
+                container.appendChild(div);
+            });
+        }
+
+        function clearLogs() {
+            if (confirm("学習履歴のみをリセットしますか？")) { studyLog = []; saveLocalData(); loadLocalData(); }
+        }
+
+        // --- TEST MANAGEMENT ---
+        function renderTestRecordsTable() {
+            const tbody = document.getElementById('testRecordsList'); tbody.innerHTML = "";
+            if (testRecords.length === 0) { tbody.innerHTML = `<tr><td colspan="6" class="py-4 text-center text-xs text-slate-400">データがありません</td></tr>`; return; }
+            testRecords.forEach(rec => {
+                const pct = Math.round((rec.score / rec.maxScore) * 100);
+                const tr = document.createElement('tr'); tr.className = "border-b text-xs";
+                tr.innerHTML = `
+                    <td class="py-2.5 px-3">${escapeHTML(rec.testName)}</td>
+                    <td class="py-2.5 px-3">${subjects[rec.subject].name}</td>
+                    <td class="py-2.5 px-3 text-slate-400">${rec.date}</td>
+                    <td class="py-2.5 px-3 text-right">${rec.score}/${rec.maxScore}</td>
+                    <td class="py-2.5 px-3 text-right text-indigo-600 font-bold">${pct}%</td>
+                    <td class="py-2.5 px-3"><button onclick="deleteTestRecord('${rec.id}')" class="text-red-500">削除</button></td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        function addTestResult(e) {
+            e.preventDefault();
+            testRecords.push({
+                id: crypto.randomUUID(),
+                testName: document.getElementById('testNameInput').value,
+                subject: document.getElementById('testSubjectInput').value,
+                date: document.getElementById('testDateInput').value,
+                score: parseInt(document.getElementById('testScoreInput').value),
+                maxScore: parseInt(document.getElementById('testMaxScoreInput').value)
+            });
+            document.getElementById('testNameInput').value = "";
+            document.getElementById('testScoreInput').value = "";
+            document.getElementById('testMaxScoreInput').value = "";
+            saveLocalData(); loadLocalData();
+        }
+
+        function deleteTestRecord(id) { testRecords = testRecords.filter(r => r.id !== id); saveLocalData(); loadLocalData(); }
+        function clearTestRecords() { if (confirm("全てのテスト結果を削除しますか？")) { testRecords = []; saveLocalData(); loadLocalData(); } }
+
+
+        // --- SCHEDULE CALENDAR PROCESS ---
+        function changeCalendarMonth(direction) {
+            currentCalendarDate.setMonth(currentCalendarDate.getMonth() + direction);
+            renderCalendar();
+        }
+
+        function renderCalendar() {
+            const year = currentCalendarDate.getFullYear();
+            const month = currentCalendarDate.getMonth();
+            
+            document.getElementById('calendarMonthHeader').textContent = `${year}年 ${month + 1}月`;
+            const grid = document.getElementById('calendarDaysGrid');
+            grid.innerHTML = "";
+
+            const startDayOfWeek = new Date(year, month, 1).getDay();
+            const daysInMonth = new Date(year, month + 1, 0).getDate();
+            const prevMonthDays = new Date(year, month, 0).getDate();
+
+            for (let i = startDayOfWeek - 1; i >= 0; i--) {
+                const dayDiv = document.createElement('div');
+                dayDiv.className = "h-14 p-1 bg-slate-50/50 text-slate-300 font-semibold rounded-lg text-left flex flex-col justify-between opacity-40 select-none";
+                dayDiv.innerHTML = `<span>${prevMonthDays - i}</span>`;
+                grid.appendChild(dayDiv);
+            }
+
+            for (let d = 1; d <= daysInMonth; d++) {
+                const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+                const isSelected = selectedCalendarDateStr === dateStr;
+                
+                const dayOfWeek = new Date(year, month, d).getDay();
+                let textColorClass = "text-slate-700";
+                if (dayOfWeek === 0) textColorClass = "text-red-500";
+                else if (dayOfWeek === 6) textColorClass = "text-blue-500";
+
+                const dayDiv = document.createElement('div');
+                dayDiv.className = `h-14 p-1 rounded-lg border text-left flex flex-col justify-between cursor-pointer transition-all ${
+                    isSelected ? 'bg-indigo-50 border-indigo-400 font-extrabold shadow-sm' : 'bg-white border-slate-200/60 hover:bg-slate-50'
+                }`;
+                dayDiv.onclick = () => selectCalendarDate(dateStr);
+
+                const dayEvents = calendarEvents.filter(e => e.date === dateStr);
+                let dotsHtml = "";
+                if (dayEvents.length > 0) {
+                    dotsHtml = `<div class="flex flex-wrap gap-1 max-h-5 overflow-hidden">`;
+                    dayEvents.slice(0, 3).forEach(ev => {
+                        let dotColor = "bg-slate-400";
+                        if (ev.category === 'study') dotColor = "bg-indigo-500";
+                        else if (ev.category === 'test') dotColor = "bg-red-500";
+                        else if (ev.category === 'rest') dotColor = "bg-emerald-500";
+                        else if (ev.category === 'other') dotColor = "bg-amber-500";
+                        
+                        const dotOpacity = ev.done ? 'opacity-30' : 'opacity-100';
+                        dotsHtml += `<span class="w-1.5 h-1.5 rounded-full ${dotColor} ${dotOpacity}"></span>`;
+                    });
+                    if (dayEvents.length > 3) dotsHtml += `<span class="text-[7px] text-slate-400 font-black">+</span>`;
+                    dotsHtml += `</div>`;
+                }
+
+                dayDiv.innerHTML = `<span class="text-xs ${textColorClass}">${d}</span>${dotsHtml}`;
+                grid.appendChild(dayDiv);
+            }
+
+            const activeDate = new Date(selectedCalendarDateStr);
+            document.getElementById('lblSelectedDateHeader').textContent = `${activeDate.getMonth() + 1}月 ${activeDate.getDate()}日の予定`;
+        }
+
+        function selectCalendarDate(dateStr) {
+            selectedCalendarDateStr = dateStr;
+            renderCalendar();
+            renderSelectedDayEvents();
+        }
+
+        function renderSelectedDayEvents() {
+            const container = document.getElementById('dayEventsContainer');
+            container.innerHTML = "";
+
+            const dayEvents = calendarEvents.filter(e => e.date === selectedCalendarDateStr);
+
+            if (dayEvents.length === 0) {
+                container.innerHTML = `<p class="text-xs text-slate-400 py-6 text-center font-bold">この日の予定はありません</p>`;
+                return;
+            }
+
+            dayEvents.forEach(ev => {
+                const item = document.createElement('div');
+                item.className = `flex justify-between items-center p-2.5 rounded-xl border transition-all ${
+                    ev.done ? 'bg-slate-50 border-slate-100 opacity-55' : 'bg-slate-50 border-slate-200'
+                }`;
+
+                let badgeColor = "bg-slate-100 text-slate-600";
+                let badgeText = "その他";
+                if (ev.category === 'study') { badgeColor = "bg-indigo-50 text-indigo-600"; badgeText = "勉強"; }
+                else if (ev.category === 'test') { badgeColor = "bg-red-50 text-red-600 border border-red-100"; badgeText = "試験"; }
+                else if (ev.category === 'rest') { badgeColor = "bg-emerald-50 text-emerald-600"; badgeText = "お休み"; }
+                else if (ev.category === 'other') { badgeColor = "bg-amber-50 text-amber-600"; badgeText = "イベント"; }
+
+                item.innerHTML = `
+                    <div class="flex items-center gap-2 min-w-0 flex-1">
+                        <button onclick="toggleCalendarEvent('${ev.id}')" class="w-4.5 h-4.5 rounded border border-slate-400 flex items-center justify-center text-xs shrink-0 transition-all ${
+                            ev.done ? 'bg-indigo-500 text-white border-indigo-500' : 'text-transparent hover:border-indigo-500'
+                        }"><i class="fas fa-check text-[9px]"></i></button>
+                        <div class="truncate">
+                            <span class="text-xs font-bold ${ev.done ? 'line-through text-slate-400' : 'text-slate-800'}">${escapeHTML(ev.title)}</span>
+                            <span class="text-[8px] font-black px-1.5 py-0.5 rounded ml-1.5 ${badgeColor}">${badgeText}</span>
+                        </div>
+                    </div>
+                    <button onclick="deleteCalendarEvent('${ev.id}')" class="text-slate-400 hover:text-red-500 text-xs px-2"><i class="fas fa-trash"></i></button>
+                `;
+                container.appendChild(item);
+            });
+        }
+
+        function addCalendarEvent(e) {
+            e.preventDefault();
+            const input = document.getElementById('calendarEventInput');
+            const title = input.value.trim();
+            if (!title) return;
+
+            const category = document.getElementById('calendarEventCategory').value;
+
+            calendarEvents.push({
+                id: crypto.randomUUID(),
+                date: selectedCalendarDateStr,
+                title: title,
+                category: category,
+                done: false
+            });
+
+            input.value = "";
+            saveLocalData();
+            renderCalendar();
+            renderSelectedDayEvents();
+            showToast("予定を追加しました！");
+            playSynthesizerSound(600, 0.1, 'sine');
+        }
+
+        function toggleCalendarEvent(id) {
+            const idx = calendarEvents.findIndex(ev => ev.id === id);
+            if (idx !== -1) {
+                calendarEvents[idx].done = !calendarEvents[idx].done;
+                saveLocalData();
+                renderCalendar();
+                renderSelectedDayEvents();
+                if (calendarEvents[idx].done) playSynthesizerSound(523, 0.1, 'sine');
+            }
+        }
+
+        function deleteCalendarEvent(id) {
+            calendarEvents = calendarEvents.filter(ev => ev.id !== id);
+            saveLocalData();
+            renderCalendar();
+            renderSelectedDayEvents();
+            showToast("予定を削除しました");
+        }
+
+
+        // --- DYNAMIC CARD VALUES ---
+        function updateDashboardCards() {
+            let totalSecs = studyLog.reduce((acc, current) => acc + current.seconds, 0);
+            document.getElementById('dashTotalHours').textContent = `${(totalSecs / 3600).toFixed(1)} 時間`;
+            
+            const done = goalsList.filter(g => g.done).length;
+            document.getElementById('dashGoalsCount').textContent = `${done} / ${goalsList.length} 達成`;
+
+            if (testRecords.length === 0) document.getElementById('dashAverageScore').textContent = "-- %";
+            else {
+                let totalPct = testRecords.reduce((acc, r) => acc + ((r.score/r.maxScore)*100), 0);
+                document.getElementById('dashAverageScore').textContent = `${Math.round(totalPct / testRecords.length)} %`;
+            }
+
+            document.getElementById('shareTotalHours').textContent = `${Math.round(totalSecs / 60)} 分`;
+            document.getElementById('shareTotalQuests').textContent = `${done} 件`;
+        }
+
+
+        // --- REAL-TIME PUBLIC FEEDS (全体共有チャット) ---
+        function startSharesTimelineListener() {
+            if (isDemoMode) {
+                renderTimelineShares(mockShares);
+                return;
+            }
+            if (!db || !user) return;
+            try {
+                // RULE 1: /artifacts/{appId}/public/data/{collectionName}
+                const timelineQuery = db.collection('artifacts')
+                                        .doc(appId)
+                                        .collection('public')
+                                        .doc('data')
+                                        .collection('shares');
+
+                timelineUnsubscribe = timelineQuery.onSnapshot((snapshot) => {
+                    let sharesList = [];
+                    snapshot.forEach(doc => {
+                        sharesList.push({ id: doc.id, ...doc.data() });
+                    });
+                    sharesList.sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
+                    renderTimelineShares(sharesList);
+                }, (error) => {
+                    console.warn("Firestore share listener fails. Switching to mock feed.", error);
+                    enableDemoMode();
+                });
+            } catch (err) {
+                console.error("Timeline listener setup fails:", err);
+            }
+        }
+
+        function renderTimelineShares(shares) {
+            const container = document.getElementById('shareTimeline');
+            container.innerHTML = "";
+            if (shares.length === 0) {
+                container.innerHTML = `<p class="text-xs text-slate-400 text-center py-12">現在全体フィードへの共有はありません。</p>`;
+                return;
+            }
+            shares.slice(0, 30).forEach(share => {
+                const date = new Date(share.timestamp);
+                const timeStr = `${date.getMonth() + 1}/${date.getDate()} ${date.getHours()}:${String(date.getMinutes()).padStart(2, '0')}`;
+                const card = document.createElement('div');
+                card.className = "p-4 rounded-2xl bg-white border flex flex-col md:flex-row justify-between items-start md:items-center gap-3 shadow-sm";
+                card.innerHTML = `
+                    <div class="space-y-1">
+                        <div class="flex items-center gap-2">
+                            <span class="text-sm font-bold text-slate-800">${escapeHTML(share.userAvatar || "🐻")} ${escapeHTML(share.userNick || "匿名")}</span>
+                            <span class="text-[9px] text-slate-400 font-bold">${timeStr}</span>
+                        </div>
+                        <p class="text-xs text-slate-600 font-semibold">${escapeHTML(share.comment)}</p>
+                    </div>
+                    <div class="flex items-center gap-3 shrink-0">
+                        <div class="bg-indigo-50 border border-indigo-200 px-3 py-1.5 rounded-xl text-right">
+                            <p class="text-[8px] text-indigo-500 font-bold uppercase leading-none">今日の成果</p>
+                            <p class="text-xs font-black text-indigo-700 mt-1">${share.totalMinutes || 0}分 / ${share.questsDone || 0}件</p>
+                        </div>
+                        <button onclick="sendLikeToShare('${share.id}', ${share.likes || 0})" class="w-10 h-10 rounded-xl bg-white hover:bg-rose-50/10 border border-slate-200 flex flex-col items-center justify-center text-slate-400 hover:text-rose-500 shadow-sm">
+                            <i class="fas fa-heart text-xs"></i>
+                            <span class="text-[9px] font-bold mt-0.5">${share.likes || 0}</span>
+                        </button>
+                    </div>
+                `;
+                container.appendChild(card);
+            });
+        }
+
+        async function postShare(e) {
+            e.preventDefault();
+            const input = document.getElementById('shareMsgInput');
+            const comment = input.value.trim();
+            if (!comment) return;
+
+            let totalSecs = studyLog.reduce((acc, c) => acc + c.seconds, 0);
+            const done = goalsList.filter(g => g.done).length;
+
+            if (isDemoMode) {
+                // デモモード：モック配列へ直接追加
+                const newShare = {
+                    id: "mock_" + Date.now(),
+                    userId: "demo_user",
+                    userNick: userNick,
+                    userAvatar: selectedAvatarEmoji,
+                    comment: comment,
+                    totalMinutes: Math.round(totalSecs / 60),
+                    questsDone: done,
+                    likes: 0,
+                    timestamp: Date.now()
+                };
+                mockShares.unshift(newShare);
+                saveLocalData();
+                renderTimelineShares(mockShares);
+                input.value = "";
+                showToast("【デモ】全体フィードへコメントを模擬投稿しました！");
+                
+                // 5秒後にAI勉強仲間がイイネしてくれる演出
+                setTimeout(() => {
+                    newShare.likes += 1;
+                    saveLocalData();
+                    renderTimelineShares(mockShares);
+                    playSynthesizerSound(600, 0.15, 'sine');
+                    showToast("タイムラインの投稿にリアクションがつきました！❤️");
+                }, 4000);
+                return;
+            }
+
+            if (!db || !user) return;
+            try {
+                const ref = db.collection('artifacts').doc(appId).collection('public').doc('data').collection('shares');
+                await ref.add({
+                    userId: user.uid,
+                    userNick: userNick,
+                    userAvatar: selectedAvatarEmoji,
+                    comment: comment,
+                    totalMinutes: Math.round(totalSecs / 60),
+                    questsDone: done,
+                    likes: 0,
+                    timestamp: Date.now()
+                });
+                input.value = "";
+                showToast("全体に学習コメントを共有しました！");
+            } catch (err) {
+                console.error("Posting fails:", err);
+            }
+        }
+
+        async function sendLikeToShare(id, currentLikes) {
+            if (isDemoMode) {
+                const target = mockShares.find(s => s.id === id);
+                if (target) {
+                    target.likes += 1;
+                    saveLocalData();
+                    renderTimelineShares(mockShares);
+                    playSynthesizerSound(698, 0.1, 'sine');
+                }
+                return;
+            }
+            if (!db || !user) return;
+            try {
+                const doc = db.collection('artifacts').doc(appId).collection('public').doc('data').collection('shares').doc(id);
+                await doc.update({ likes: currentLikes + 1 });
+            } catch (err) {
+                console.error("Liking fails:", err);
+            }
+        }
+
+        function refreshShares() {
+            if (timelineUnsubscribe) timelineUnsubscribe();
+            startSharesTimelineListener();
+            showToast("フィードを更新しました");
+        }
+
+
+        // --- PRIVATE GROUPS (招待制グループ & オンライン/模擬バトル共有機能) ---
+        
+        async function createGroup(e) {
+            e.preventDefault();
+            const input = document.getElementById('groupNameCreateInput');
+            const gName = input.value.trim();
+            if (!gName) return;
+
+            const code = generateCode();
+            let totalSecs = studyLog.reduce((acc, cur) => acc + cur.seconds, 0);
+
+            if (isDemoMode) {
+                // デモモード：ローカルメモリ内にモックグループを作成
+                mockGroups[code] = {
+                    name: gName,
+                    code: code,
+                    leaderId: "demo_user",
+                    members: [
+                        { uid: "demo_user", nick: userNick, avatar: selectedAvatarEmoji, weeklyMinutes: Math.round(totalSecs/60), averageScore: getMyAverageScore() },
+                        { uid: "ai_bot1", nick: "さくら#204", avatar: "🦊", weeklyMinutes: 120, averageScore: 88 },
+                        { uid: "ai_bot2", nick: "たくや#512", avatar: "🐼", weeklyMinutes: 45, averageScore: 74 }
+                    ],
+                    messages: [
+                        { id: crypto.randomUUID(), senderUid: "system", senderNick: "システム", text: `グループ「${gName}」が作成されました！ コード[ ${code} ]を友達に共有しましょう。`, timestamp: Date.now() },
+                        { id: crypto.randomUUID(), senderUid: "ai_bot1", senderNick: "さくら#204", senderAvatar: "🦊", text: "初めまして！みんなで一緒に勉強して点数アップさせよう！", timestamp: Date.now() - 1000 }
+                    ]
+                };
+                joinedGroupCode = code;
+                saveLocalData();
+                input.value = "";
+                syncStudyGroupRealtime();
+                showToast("【デモ】勉強グループをシミュレーション作成しました！");
+                return;
+            }
+
+            if (!db || !user) return;
+            try {
+                const ref = db.collection('artifacts').doc(appId).collection('public').doc('data').collection('groups').doc(code);
+                
+                const initialData = {
+                    name: gName,
+                    code: code,
+                    leaderId: user.uid,
+                    members: [
+                        { uid: user.uid, nick: userNick, avatar: selectedAvatarEmoji, weeklyMinutes: Math.round(totalSecs/60), averageScore: getMyAverageScore() }
+                    ],
+                    messages: [
+                        { id: crypto.randomUUID(), senderUid: "system", senderNick: "システム", text: `グループ「${gName}」が作成されました！ 招待コード [ ${code} ] を友達にシェアしましょう！`, timestamp: Date.now() }
+                    ]
+                };
+
+                await ref.set(initialData);
+                joinedGroupCode = code;
+                saveLocalData();
+                input.value = "";
+                syncStudyGroupRealtime();
+                showToast("グループを作成しました！");
+            } catch (err) {
+                console.error("Group creation fail:", err);
+            }
+        }
+
+        async function joinGroupWithCode(e) {
+            e.preventDefault();
+            const input = document.getElementById('groupCodeJoinInput');
+            const code = input.value.trim().toUpperCase();
+            if (code.length !== 6) return;
+
+            if (isDemoMode) {
+                // デモモード：任意の6桁のコード入力で、シミュレーション用のAIグループに合流させる
+                mockGroups[code] = {
+                    name: "テスト突破・集中学習室",
+                    code: code,
+                    leaderId: "ai_bot3",
+                    members: [
+                        { uid: "ai_bot3", nick: "ユウキ#880", avatar: "🦁", weeklyMinutes: 180, averageScore: 92 },
+                        { uid: "ai_bot1", nick: "さくら#204", avatar: "🦊", weeklyMinutes: 120, averageScore: 88 },
+                        { uid: "demo_user", nick: userNick, avatar: selectedAvatarEmoji, weeklyMinutes: Math.round(studyLog.reduce((a,b)=>a+b.seconds,0)/60), averageScore: getMyAverageScore() }
+                    ],
+                    messages: [
+                        { id: crypto.randomUUID(), senderUid: "system", senderNick: "システム", text: "グループ「テスト突破・集中学習室」に入室しました。", timestamp: Date.now() },
+                        { id: crypto.randomUUID(), senderUid: "ai_bot3", senderNick: "ユウキ#880", senderAvatar: "🦁", text: "参加してくれてありがとう！今ちょうどみんなで模試対策チャット中だよ！", timestamp: Date.now() - 5000 }
+                    ]
+                };
+                joinedGroupCode = code;
+                saveLocalData();
+                input.value = "";
+                syncStudyGroupRealtime();
+                showToast("【デモ】シミュレーション勉強グループに合流しました！");
+                return;
+            }
+
+            if (!db || !user) return;
+            try {
+                const ref = db.collection('artifacts').doc(appId).collection('public').doc('data').collection('groups').doc(code);
+                const doc = await ref.get();
+                if (!doc.exists) {
+                    alert("グループが見つかりません。招待コードが正しいか確認してください。");
+                    return;
+                }
+
+                const data = doc.data();
+                const isMember = data.members.some(m => m.uid === user.uid);
+                if (!isMember) {
+                    let totalSecs = studyLog.reduce((acc, cur) => acc + cur.seconds, 0);
+                    data.members.push({
+                        uid: user.uid,
+                        nick: userNick,
+                        avatar: selectedAvatarEmoji,
+                        weeklyMinutes: Math.round(totalSecs/60),
+                        averageScore: getMyAverageScore()
+                    });
+                    data.messages.push({
+                        id: crypto.randomUUID(),
+                        senderUid: "system",
+                        senderNick: "システム",
+                        text: `${selectedAvatarEmoji} ${userNick} が学習ルームに合流しました！`,
+                        timestamp: Date.now()
+                    });
+
+                    await ref.update({ members: data.members, messages: data.messages });
+                }
+
+                joinedGroupCode = code;
+                saveLocalData();
+                input.value = "";
+                syncStudyGroupRealtime();
+                showToast("グループに参加しました！");
+            } catch (err) {
+                console.error("Joining fails:", err);
+            }
+        }
+
+        function syncStudyGroupRealtime() {
+            if (isDemoMode) {
+                activeGroupData = mockGroups[joinedGroupCode] || null;
+                if (!activeGroupData) {
+                    handleLocalGroupExit();
+                    return;
+                }
+                renderGroupWorkspace();
+                return;
+            }
+
+            if (!db || !user || !joinedGroupCode) return;
+            if (groupUnsubscribe) groupUnsubscribe();
+
+            try {
+                const docRef = db.collection('artifacts').doc(appId).collection('public').doc('data').collection('groups').doc(joinedGroupCode);
+                groupUnsubscribe = docRef.onSnapshot((snap) => {
+                    if (!snap.exists) {
+                        if (activeGroupData) alert("グループはリーダーによって削除・解散されました。");
+                        handleLocalGroupExit();
+                        return;
+                    }
+                    const data = snap.data();
+                    const isKicked = !data.members.some(m => m.uid === user.uid);
+                    if (isKicked) {
+                        alert("リーダーによってグループから退出（キック）されました。");
+                        handleLocalGroupExit();
+                        return;
+                    }
+                    activeGroupData = data;
+                    renderGroupWorkspace();
+                }, (err) => {
+                    console.warn("Group snapshot failed. Switching to mock storage.", err);
+                    enableDemoMode();
+                });
+            } catch (err) {
+                console.error("Group sync setup fails:", err);
+            }
+        }
+
+        async function updateMyGroupProgressOnCloud() {
+            if (isDemoMode && joinedGroupCode && activeGroupData) {
+                let totalSecs = studyLog.reduce((acc, cur) => acc + cur.seconds, 0);
+                activeGroupData.members = activeGroupData.members.map(m => {
+                    if (m.uid === "demo_user") {
+                        return {
+                            ...m,
+                            nick: userNick,
+                            avatar: selectedAvatarEmoji,
+                            weeklyMinutes: Math.round(totalSecs/60),
+                            averageScore: getMyAverageScore()
+                        };
+                    }
+                    return m;
+                });
+                mockGroups[joinedGroupCode] = activeGroupData;
+                saveLocalData();
+                renderGroupWorkspace();
+                return;
+            }
+
+            if (!db || !user || !joinedGroupCode || !activeGroupData) return;
+            try {
+                const ref = db.collection('artifacts').doc(appId).collection('public').doc('data').collection('groups').doc(joinedGroupCode);
+                let totalSecs = studyLog.reduce((acc, cur) => acc + cur.seconds, 0);
+                
+                const updatedMembers = activeGroupData.members.map(m => {
+                    if (m.uid === user.uid) {
+                        return {
+                            ...m,
+                            nick: userNick,
+                            avatar: selectedAvatarEmoji,
+                            weeklyMinutes: Math.round(totalSecs/60),
+                            averageScore: getMyAverageScore()
+                        };
+                    }
+                    return m;
+                });
+
+                await ref.update({ members: updatedMembers });
+            } catch (err) {
+                console.warn("Could not sync profile to cloud:", err);
+            }
+        }
+
+        function renderGroupWorkspace() {
+            if (!activeGroupData) return;
+            document.getElementById('groupUnjoinedSection').classList.add('hidden');
+            document.getElementById('groupJoinedSection').classList.remove('hidden');
+
+            document.getElementById('lblGroupName').textContent = activeGroupData.name;
+            document.getElementById('lblGroupCode').textContent = activeGroupData.code;
+
+            const isLeader = activeGroupData.leaderId === "demo_user" || (user && activeGroupData.leaderId === user.uid);
+            if (isLeader) {
+                document.getElementById('badgeLeaderCrown').classList.remove('hidden');
+                document.getElementById('leaderControlPanel').classList.remove('hidden');
+                document.getElementById('btnGroupDestroy').classList.remove('hidden');
+                document.getElementById('btnGroupExit').classList.add('hidden');
+            } else {
+                document.getElementById('badgeLeaderCrown').classList.add('hidden');
+                document.getElementById('leaderControlPanel').classList.add('hidden');
+                document.getElementById('btnGroupDestroy').classList.add('hidden');
+                document.getElementById('btnGroupExit').classList.remove('hidden');
+            }
+
+            const membersList = document.getElementById('groupMembersList');
+            membersList.innerHTML = "";
+            activeGroupData.members.forEach(m => {
+                const div = document.createElement('div');
+                div.className = "p-3 rounded-2xl bg-slate-50 border flex flex-col gap-1.5 shadow-sm relative";
+                
+                const scoreDisplay = m.averageScore !== null ? `${m.averageScore}%` : "未受験";
+                const isMemberLeader = m.uid === activeGroupData.leaderId;
+
+                div.innerHTML = `
+                    <div class="flex justify-between items-center">
+                        <div class="flex items-center gap-2">
+                            <span class="text-lg">${escapeHTML(m.avatar || "🐻")}</span>
+                            <div>
+                                <span class="text-xs font-bold text-slate-800">${escapeHTML(m.nick)}</span>
+                                ${isMemberLeader ? `<span class="text-[9px] bg-amber-100 text-amber-700 px-1 rounded font-bold ml-1.5"><i class="fas fa-crown"></i> リーダー</span>` : ''}
+                            </div>
+                        </div>
+                        ${isLeader && !isMemberLeader ? `<button onclick="kickMemberByLeader('${m.uid}')" class="text-[9px] text-red-500 hover:bg-red-50 px-2 py-0.5 rounded border border-red-200 font-bold">キック</button>` : ''}
+                    </div>
+                    <div class="grid grid-cols-2 gap-2 mt-1 border-t border-slate-200/50 pt-1.5 text-center">
+                        <div class="bg-indigo-50/40 p-1.5 rounded-lg border border-indigo-100/30">
+                            <span class="text-[8px] text-slate-400 block font-semibold leading-none">勉強時間</span>
+                            <span class="text-xs font-black text-indigo-600 mt-1 block">${m.weeklyMinutes || 0} 分</span>
+                        </div>
+                        <div class="bg-violet-50/40 p-1.5 rounded-lg border border-violet-100/30">
+                            <span class="text-[8px] text-slate-400 block font-semibold leading-none">平均テスト点</span>
+                            <span class="text-xs font-black text-violet-600 mt-1 block">${scoreDisplay}</span>
+                        </div>
+                    </div>
+                `;
+                membersList.appendChild(div);
+            });
+
+            const chatBox = document.getElementById('groupChatContainer');
+            chatBox.innerHTML = "";
+            activeGroupData.messages.forEach(msg => {
+                const isSystem = msg.senderUid === 'system';
+                const isMe = msg.senderUid === 'demo_user' || (user && msg.senderUid === user.uid);
+                const bubble = document.createElement('div');
+
+                if (isSystem) {
+                    bubble.className = "flex justify-center my-1.5";
+                    bubble.innerHTML = `<span class="bg-indigo-50 border text-indigo-700 px-3 py-0.5 rounded-full text-[10px] font-bold">${escapeHTML(msg.text)}</span>`;
+                } else {
+                    bubble.className = `flex items-end gap-2 my-2 ${isMe ? 'flex-row-reverse' : ''}`;
+                    const time = new Date(msg.timestamp);
+                    const timeStr = `${time.getHours()}:${String(time.getMinutes()).padStart(2, '0')}`;
+                    bubble.innerHTML = `
+                        <span class="w-8 h-8 rounded-full bg-slate-100 border flex items-center justify-center text-base shrink-0">${escapeHTML(msg.senderAvatar || "🐻")}</span>
+                        <div class="max-w-[70%]">
+                            <span class="text-[9px] text-slate-400 font-bold block mb-0.5 ${isMe ? 'text-right' : ''}">${escapeHTML(msg.senderNick)}</span>
+                            <div class="p-3 rounded-2xl text-xs font-semibold shadow-sm leading-relaxed ${isMe ? 'bg-indigo-600 text-white rounded-br-none' : 'bg-slate-100 text-slate-800 rounded-bl-none border border-slate-200'}">
+                                ${escapeHTML(msg.text)}
+                            </div>
+                        </div>
+                        <span class="text-[8px] text-slate-400 font-semibold">${timeStr}</span>
+                    `;
+                }
+                chatBox.appendChild(bubble);
+            });
+
+            setTimeout(() => { chatBox.scrollTop = chatBox.scrollHeight; }, 30);
+        }
+
+        async function postGroupMessage(e) {
+            e.preventDefault();
+            const input = document.getElementById('groupChatMsgInput');
+            const txt = input.value.trim();
+            if (!txt) return;
+
+            if (isDemoMode) {
+                // デモモード：モックチャット送信＆AIメンバーからの自動激励返信機能
+                const nextMsg = {
+                    id: crypto.randomUUID(),
+                    senderUid: "demo_user",
+                    senderNick: userNick,
+                    senderAvatar: selectedAvatarEmoji,
+                    text: txt,
+                    timestamp: Date.now()
+                };
+                activeGroupData.messages.push(nextMsg);
+                mockGroups[joinedGroupCode] = activeGroupData;
+                saveLocalData();
+                renderGroupWorkspace();
+                input.value = "";
+                playSynthesizerSound(700, 0.08, 'sine');
+
+                // 2秒後にモック仲間からの自動返信
+                setTimeout(() => {
+                    const aiReplies = [
+                        "さすが！素晴らしい集中力ですね！",
+                        "お疲れ様！私も負けずに次のTODOをやります！",
+                        "カレンダーに予定を書いて、予定通り勉強するとすごくはかどるよ！",
+                        "平均点素晴らしいですね！次回テストのモチベーションが上がります。"
+                    ];
+                    const randomAi = activeGroupData.members.find(m => m.uid.startsWith("ai_bot")) || { uid: "ai_bot1", nick: "さくら#204", avatar: "🦊" };
+                    
+                    const aiMsg = {
+                        id: crypto.randomUUID(),
+                        senderUid: randomAi.uid,
+                        senderNick: randomAi.nick,
+                        senderAvatar: randomAi.avatar,
+                        text: aiReplies[Math.floor(Math.random() * aiReplies.length)],
+                        timestamp: Date.now()
+                    };
+                    activeGroupData.messages.push(aiMsg);
+                    mockGroups[joinedGroupCode] = activeGroupData;
+                    saveLocalData();
+                    renderGroupWorkspace();
+                    playSynthesizerSound(523, 0.1, 'sine');
+                }, 1800);
+                return;
+            }
+
+            if (!db || !user || !joinedGroupCode || !activeGroupData) return;
+            try {
+                const ref = db.collection('artifacts').doc(appId).collection('public').doc('data').collection('groups').doc(joinedGroupCode);
+                const nextMsg = {
+                    id: crypto.randomUUID(),
+                    senderUid: user.uid,
+                    senderNick: userNick,
+                    senderAvatar: selectedAvatarEmoji,
+                    text: txt,
+                    timestamp: Date.now()
+                };
+
+                let updated = [...activeGroupData.messages, nextMsg];
+                if (updated.length > 100) updated = updated.slice(updated.length - 100);
+
+                await ref.update({ messages: updated });
+                input.value = "";
+                playSynthesizerSound(750, 0.08, 'sine');
+            } catch (err) {
+                console.error("Chat posting fails:", err);
+            }
+        }
+
+        async function updateGroupNameByLeader(e) {
+            e.preventDefault();
+            const input = document.getElementById('leaderGroupNameInput');
+            const name = input.value.trim();
+            if (!name) return;
+
+            if (isDemoMode) {
+                activeGroupData.name = name;
+                activeGroupData.messages.push({
+                    id: crypto.randomUUID(), senderUid: "system", senderNick: "システム", text: `リーダーによりグループ名が「${name}」に更新されました。`, timestamp: Date.now()
+                });
+                mockGroups[joinedGroupCode] = activeGroupData;
+                saveLocalData();
+                renderGroupWorkspace();
+                input.value = "";
+                showToast("【デモ】グループ名を更新しました");
+                return;
+            }
+
+            if (!db || !user || !joinedGroupCode || !activeGroupData) return;
+            try {
+                const ref = db.collection('artifacts').doc(appId).collection('public').doc('data').collection('groups').doc(joinedGroupCode);
+                const alertMsg = {
+                    id: crypto.randomUUID(),
+                    senderUid: "system", senderNick: "システム", senderAvatar: "📢",
+                    text: `リーダーにより、グループ名が「${name}」に変更されました。`,
+                    timestamp: Date.now()
+                };
+                await ref.update({ name: name, messages: [...activeGroupData.messages, alertMsg] });
+                input.value = "";
+                showToast("グループ名を変更しました");
+            } catch (err) {
+                console.error(err);
+            }
+        }
+
+        async function kickMemberByLeader(targetUid) {
+            if (isDemoMode) {
+                activeGroupData.members = activeGroupData.members.filter(m => m.uid !== targetUid);
+                activeGroupData.messages.push({
+                    id: crypto.randomUUID(), senderUid: "system", senderNick: "システム", text: "メンバーが退出させられました。", timestamp: Date.now()
+                });
+                mockGroups[joinedGroupCode] = activeGroupData;
+                saveLocalData();
+                renderGroupWorkspace();
+                showToast("メンバーを退室させました");
+                return;
+            }
+
+            if (!db || !user || !joinedGroupCode || !activeGroupData) return;
+            const target = activeGroupData.members.find(m => m.uid === targetUid);
+            if (!target) return;
+
+            if (confirm(`メンバー「${target.nick}」をグループからキックしますか？`)) {
+                try {
+                    const ref = db.collection('artifacts').doc(appId).collection('public').doc('data').collection('groups').doc(joinedGroupCode);
+                    const cleanList = activeGroupData.members.filter(m => m.uid !== targetUid);
+                    const systemMsg = {
+                        id: crypto.randomUUID(),
+                        senderUid: "system", senderNick: "システム", text: `メンバー「${target.nick}」が退室させられました。`, timestamp: Date.now()
+                    };
+                    await ref.update({ members: cleanList, messages: [...activeGroupData.messages, systemMsg] });
+                    showToast("キックを実行しました");
+                } catch (err) {
+                    console.error(err);
+                }
+            }
+        }
+
+        async function deleteCurrentGroup() {
+            if (isDemoMode) {
+                delete mockGroups[joinedGroupCode];
+                handleLocalGroupExit();
+                showToast("グループを削除・解散しました");
+                return;
+            }
+            if (!db || !user || !joinedGroupCode) return;
+            if (confirm("グループを完全に削除（解散）しますか？ この操作は取り消せません。")) {
+                try {
+                    const ref = db.collection('artifacts').doc(appId).collection('public').doc('data').collection('groups').doc(joinedGroupCode);
+                    await ref.delete();
+                } catch (err) {
+                    console.error(err);
+                }
+            }
+        }
+
+        async function exitCurrentGroup() {
+            if (isDemoMode) {
+                handleLocalGroupExit();
+                showToast("グループから退出しました");
+                return;
+            }
+            if (!db || !user || !joinedGroupCode || !activeGroupData) return;
+            if (confirm("本当にグループから退会しますか？")) {
+                try {
+                    const ref = db.collection('artifacts').doc(appId).collection('public').doc('data').collection('groups').doc(joinedGroupCode);
+                    const cleanList = activeGroupData.members.filter(m => m.uid !== user.uid);
+                    const alertMsg = {
+                        id: crypto.randomUUID(),
+                        senderUid: "system", senderNick: "システム", text: `「${userNick}」がグループから退出しました。`, timestamp: Date.now()
+                    };
+                    await ref.update({ members: cleanList, messages: [...activeGroupData.messages, alertMsg] });
+                    handleLocalGroupExit();
+                    showToast("グループから退出しました");
+                } catch (err) {
+                    console.error(err);
+                }
+            }
+        }
+
+        function handleLocalGroupExit() {
+            if (groupUnsubscribe) { groupUnsubscribe(); groupUnsubscribe = null; }
+            joinedGroupCode = "";
+            activeGroupData = null;
+            saveLocalData();
+            document.getElementById('groupJoinedSection').classList.add('hidden');
+            document.getElementById('groupUnjoinedSection').classList.remove('hidden');
+        }
+
+        function copyGroupCode() {
+            if (!joinedGroupCode) return;
+            const el = document.createElement('textarea');
+            el.value = joinedGroupCode; document.body.appendChild(el);
+            el.select(); document.execCommand('copy'); document.body.removeChild(el);
+            showToast("グループ招待コードをコピーしました！");
+        }
+
+        // --- MATH/STATS HELPERS ---
+        function getMyAverageScore() {
+            if (testRecords.length === 0) return null;
+            let totalPct = testRecords.reduce((acc, r) => acc + ((r.score/r.maxScore)*100), 0);
+            return Math.round(totalPct / testRecords.length);
+        }
+
+        function generateCode() {
+            const pool = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+            let c = ""; for (let i = 0; i < 6; i++) c += pool.charAt(Math.floor(Math.random() * pool.length));
+            return c;
+        }
+
+
+        // --- CHART GENERATION ENGINE ---
+        function updateCharts() {
+            // 比率ドーナツグラフ
+            const totals = {}; for (let s in subjects) totals[s] = 0;
+            studyLog.forEach(l => { if(totals[l.subject]!==undefined) totals[l.subject]+=l.seconds; });
+            const vals = Object.keys(subjects).map(s => Math.round(totals[s]/60));
+            const hasData = vals.reduce((a,b)=>a+b,0) > 0;
+            
+            document.getElementById('ratioChartFallback').className = hasData ? "hidden" : "absolute inset-0 bg-white/95 flex items-center justify-center text-xs text-slate-400 font-bold";
+            
+            const ratioCtx = document.getElementById('ratioChart').getContext('2d');
+            if (ratioChartInstance) ratioChartInstance.destroy();
+            if (hasData) {
+                ratioChartInstance = new Chart(ratioCtx, {
+                    type: 'doughnut',
+                    data: {
+                        labels: Object.keys(subjects).map(s=>subjects[s].name),
+                        datasets: [{ data: vals, backgroundColor: Object.keys(subjects).map(s=>subjects[s].color) }]
+                    },
+                    options: { responsive: true, maintainAspectRatio: false, cutout: '70%', plugins: { legend: { position: 'right' } } }
+                });
+            }
+
+            // 7日間バーグラフ
+            const labels = []; const dailyHours = Array(7).fill(0); const now = new Date();
+            for (let i = 6; i >= 0; i--) { const d = new Date(); d.setDate(now.getDate() - i); labels.push(`${d.getMonth()+1}/${d.getDate()}`); }
+            studyLog.forEach(l => {
+                const diff = Math.floor((now.getTime() - l.timestamp) / (24*60*60*1000));
+                if (diff >= 0 && diff < 7) dailyHours[6 - diff] += (l.seconds / 3600);
+            });
+            document.getElementById('weeklyTotalLabel').textContent = `合計 : ${dailyHours.reduce((a,b)=>a+b,0).toFixed(1)}時間`;
+
+            const progCtx = document.getElementById('weeklyProgressionChart').getContext('2d');
+            if (progressionChartInstance) progressionChartInstance.destroy();
+            progressionChartInstance = new Chart(progCtx, {
+                type: 'bar',
+                data: { labels: labels, datasets: [{ label: '時間', data: dailyHours.map(h=>parseFloat(h.toFixed(1))), backgroundColor: '#6366f1' }] },
+                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } }
+            });
+
+            // 成績推移折れ線グラフ
+            const testCtx = document.getElementById('testProgressionChart').getContext('2d');
+            if (testProgressionChartInstance) testProgressionChartInstance.destroy();
+            if (testRecords.length > 0) {
+                testRecords.sort((a,b)=>new Date(a.date)-new Date(b.date));
+                const exams = [...new Set(testRecords.map(r=>r.testName))];
+                const sets = Object.keys(subjects).map(s => {
+                    const pts = exams.map(ex => { const m = testRecords.find(r=>r.testName===ex && r.subject===s); return m ? Math.round((m.score/m.maxScore)*100) : null; });
+                    return { label: subjects[s].name, data: pts, borderColor: subjects[s].color, spanGaps: true, tension: 0.1 };
+                }).filter(set => set.data.some(p=>p!==null));
+
+                testProgressionChartInstance = new Chart(testCtx, {
+                    type: 'line',
+                    data: { labels: exams, datasets: sets },
+                    options: { responsive: true, maintainAspectRatio: false, scales: { y: { min: 0, max: 100 } } }
+                });
+            }
+        }
+
+        // --- AUDIO / NOTIFICATION UTILS ---
+        function showToast(msg) {
+            const t = document.getElementById('toast'); document.getElementById('toastMessage').textContent = msg;
+            t.className = t.className.replace("opacity-0 pointer-events-none transform translate-y-3", "opacity-100 transform translate-y-0");
+            setTimeout(() => { t.className = t.className.replace("opacity-100 transform translate-y-0", "opacity-0 pointer-events-none transform translate-y-3"); }, 3000);
+        }
+
+        function playSynthesizerSound(freq, duration, type = 'sine') {
+            try {
+                const ctx = new (window.AudioContext || window.webkitAudioContext)();
+                const osc = ctx.createOscillator();
+                const gain = ctx.createGain();
+                osc.type = type;
+                osc.frequency.setValueAtTime(freq, ctx.currentTime);
+                gain.gain.setValueAtTime(0.08, ctx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + duration);
+                osc.connect(gain); gain.connect(ctx.destination);
+                osc.start(); osc.stop(ctx.currentTime + duration);
+            } catch (e) {}
+        }
+
+        function escapeHTML(str) { return str.replace(/[&<>'"]/g, t => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[t] || t)); }
+
+        // --- APPS INITIATOR ---
+        window.onload = function() {
+            loadLocalData();
+            initFirebase();
+            document.getElementById('testDateInput').value = new Date().toISOString().split('T')[0];
+            if ('serviceWorker' in navigator) { navigator.serviceWorker.register('sw.js').catch(()=>{}); }
+        };
+
+        window.onbeforeunload = function() {
+            if (timelineUnsubscribe) timelineUnsubscribe();
+            if (groupUnsubscribe) groupUnsubscribe();
+        };
+    </script>
+</body>
+</html>
